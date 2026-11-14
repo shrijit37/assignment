@@ -1,0 +1,14 @@
+.git
+.github
+.gitignore
+node_modules
+**/node_modules
+dist
+**/dist
+coverage
+*.log
+.env
+.env.*
+!.env.example
+README.md
+netlify.toml

@@ -1,5 +1,9 @@
 # Taskly — weekly to-do planner
 
+[![ci](https://github.com/shrijit37/assignment/actions/workflows/ci.yml/badge.svg)](https://github.com/shrijit37/assignment/actions/workflows/ci.yml)
+
+Live at <https://todo.shrijit.tech>.
+
 A full-stack task planner built around one idea: plan the week Monday to Sunday, see what
 is still open, and tick things off as the week goes.
 
@@ -49,7 +53,8 @@ todo-list-app/
 │       ├── models/      Mongoose schema
 │       ├── routes/      route table
 │       └── validators/  Zod schemas
-└── netlify.toml         client deployment
+├── Dockerfile           multi-stage production image
+└── docker-compose.yaml  web + mongo stack used in production
 ```
 
 ## Getting started
@@ -82,6 +87,7 @@ Server (`server/.env`):
 | `MONGODB_URI` | yes, unless `USE_MEMORY_DB=1` | MongoDB connection string |
 | `PORT` | no | API port, defaults to `4000` |
 | `CLIENT_ORIGIN` | no | Comma separated allowed origins, defaults to `http://localhost:5173` |
+| `STATIC_DIR` | no | Folder with the compiled client. When set, the API serves the app and the API from one origin |
 | `USE_MEMORY_DB` | no | `1` boots an in-memory database for local development |
 
 Client (`client/.env`):
@@ -160,20 +166,46 @@ a local database. The client suite covers week maths, task rows and form validat
 
 ## Deployment
 
-**API (Render or similar)**
+The app runs as a single Express process that also serves the compiled client, plus a
+MongoDB container. Both are defined in `docker-compose.yaml` and deployed to
+[Coolify](https://coolify.io) at <https://todo.shrijit.tech>.
 
-1. Create a MongoDB Atlas cluster and copy its connection string.
-2. Create a web service from this repository.
-3. Build command: `npm install && npm run build -w server`
-4. Start command: `npm start`
-5. Environment: `MONGODB_URI`, `CLIENT_ORIGIN=https://your-site.netlify.app`, `NODE_ENV=production`
+```bash
+cp .env.example .env        # only CLIENT_ORIGIN and SERVICE_PASSWORD_MONGO are read here
+docker compose up --build
+```
 
-**Client (Netlify)**
+`docker compose` builds the image from the `Dockerfile` (Node 24, compiled workspaces,
+production dependencies only, non-root user) and stores MongoDB in the `mongo-data`
+volume. Coolify generates `SERVICE_PASSWORD_MONGO` on the first deploy and keeps it, so
+the database credentials survive redeploys.
 
-1. Import the repository; `netlify.toml` already sets the build command, publish directory
-   and SPA redirect.
-2. Add `VITE_API_BASE_URL=https://your-api.onrender.com`.
-3. Deploy, then add the Netlify origin to `CLIENT_ORIGIN` on the API and redeploy it.
+### Continuous deployment
+
+`.github/workflows/ci.yml` runs on every push and pull request: install, type-check, test
+and build. On `feat/weekly-planner` a passing run then calls the Coolify deploy webhook
+and waits until the new container answers `/api/health`.
+
+Two repository secrets are needed:
+
+| Secret | Where to get it |
+| --- | --- |
+| `COOLIFY_WEBHOOK` | Application → Webhooks → Deploy webhook |
+| `COOLIFY_TOKEN` | Keys & Tokens → API tokens |
+
+The Coolify application itself points at this repository with the **Docker Compose** build
+pack, so a deploy means "pull, rebuild, restart" — no manual steps. Auto-deploy stays off
+on purpose: only commits that pass CI reach production.
+
+### Running the same image without Coolify
+
+```bash
+docker build -t taskly .
+docker run --rm -p 4000:4000 \
+  -e MONGODB_URI="mongodb://…" \
+  -e CLIENT_ORIGIN="http://localhost:4000" \
+  taskly
+```
 
 ## Notes
 
