@@ -5,6 +5,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   MONGODB_URI: z.string().min(1, "MONGODB_URI is required").optional(),
   CLIENT_ORIGIN: z.string().default("http://localhost:5173"),
+  STATIC_DIR: z.string().optional(),
   USE_MEMORY_DB: z.enum(["0", "1"]).optional(),
 });
 
