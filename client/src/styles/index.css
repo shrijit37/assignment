@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-primary: #4566ec;
+  --color-primary-strong: #3350d6;
+  --color-primary-deep: #253c98;
+  --color-primary-soft: #eff2ff;
+
+  --color-danger: #e5484d;
+  --color-danger-soft: #ffe6e7;
+
+  --color-ink: #12141c;
+  --color-muted: #7b7f93;
+  --color-line: #e9eaf0;
+  --color-canvas: #fbfbfe;
+  --color-surface: #f7f8fd;
+
+  --shadow-card: 0 18px 40px -28px rgba(24, 35, 92, 0.55);
+  --shadow-float: 0 16px 32px -12px rgba(69, 102, 236, 0.55);
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-ink antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.55;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .safe-bottom {
+    padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+  }
+
+  .animate-rise {
+    animation: rise 220ms ease-out both;
+  }
+
+  .animate-fade {
+    animation: fade 180ms ease-out both;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
