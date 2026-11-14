@@ -4,6 +4,7 @@ import type { Task, TaskInput } from "../features/tasks/types";
 
 export const taskKeys = {
   all: ["tasks"] as const,
+  search: (term: string) => ["tasks", "search", term] as const,
 };
 
 /** Loads every task, ordered by date. */
@@ -11,6 +12,27 @@ export function useTasks() {
   return useQuery({
     queryKey: taskKeys.all,
     queryFn: () => fetchTasks(),
+  });
+}
+
+/**
+ * Loads tasks matching `term` from the API. Keeps showing the previous result
+ * while the next keystroke is in flight.
+ *
+ * @param term Search term.
+ */
+export function useTaskSearch(term: string) {
+  const queryClient = useQueryClient();
+  const trimmed = term.trim();
+
+  return useQuery({
+    queryKey: taskKeys.search(trimmed),
+    queryFn: () => fetchTasks({ search: trimmed }),
+    enabled: trimmed.length > 0,
+    placeholderData: () => queryClient.getQueryData<Task[]>(taskKeys.all)?.filter((task) => {
+      const haystack = `${task.title} ${task.description}`.toLowerCase();
+      return haystack.includes(trimmed.toLowerCase());
+    }),
   });
 }
 

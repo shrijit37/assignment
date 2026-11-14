@@ -1,5 +1,6 @@
-import { CheckCheck, Plus } from "lucide-react";
+import { CheckCheck, Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { EmptyState } from "../components/ui/EmptyState";
 import { DeleteTaskDialog } from "../features/tasks/DeleteTaskDialog";
@@ -24,6 +25,7 @@ import {
 
 /** Weekly planner: day picker, counters, progress and every task by week. */
 export function HomePage() {
+  const navigate = useNavigate();
   const tasksQuery = useTasks();
   const updateTask = useUpdateTask();
 
@@ -82,6 +84,15 @@ export function HomePage() {
           </div>
         </header>
 
+        <button
+          type="button"
+          onClick={() => navigate("/search")}
+          className="mt-5 flex w-full items-center gap-3 rounded-2xl border border-line bg-white px-4 py-3.5 text-left shadow-card transition hover:border-primary/40"
+        >
+          <Search className="size-4 text-muted" />
+          <span className="text-sm text-muted">Search for a task</span>
+        </button>
+
         {tasksQuery.isPending ? (
           <HomeSkeleton />
         ) : tasksQuery.isError ? (
@@ -121,6 +132,13 @@ export function HomePage() {
                         : `${dayTasks.length} task${dayTasks.length === 1 ? "" : "s"} · ${openTaskCount} still open`}
                     </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/search")}
+                    className="shrink-0 text-xs font-bold text-primary transition hover:text-primary-strong"
+                  >
+                    View all
+                  </button>
                 </div>
 
                 {dayTasks.length === 0 ? (
