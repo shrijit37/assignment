@@ -1,0 +1,74 @@
+name: ci
+
+on:
+  push:
+    branches: [feat/weekly-planner, main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  deploy:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feat/weekly-planner'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - name: Trigger the coolify deployment
+        env:
+          WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
+          TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -m 30 -o /tmp/deploy.json -w '%{http_code}' \
+            -X POST -H "Authorization: Bearer $TOKEN" "$WEBHOOK")
+          cat /tmp/deploy.json
+          [ "$code" -lt 300 ] || { echo "coolify returned $code"; exit 1; }
+
+      # The old container keeps answering while the new image builds, so wait for
+      # the process uptime to drop instead of trusting the first 200.
+      - name: Wait for the new container
+        run: |
+          set -euo pipefail
+          uptime() {
+            curl -fsS -m 10 https://todo.shrijit.tech/api/health |
+              jq -r '.uptime // empty' || true
+          }
+          before=$(uptime)
+          echo "uptime before: ${before:-unknown}"
+
+          for _ in $(seq 1 60); do
+            sleep 10
+            now=$(uptime)
+            if [ -z "$now" ]; then
+              echo "not answering yet"
+              continue
+            fi
+            if [ -z "$before" ] || jq -en --argjson a "$now" --argjson b "$before" '$a < $b' >/dev/null; then
+              echo "new container is up (uptime ${now}s)"
+              exit 0
+            fi
+            echo "still serving the previous container (${now}s)"
+          done
+
+          echo "the deployment did not roll over in 10 minutes"
+          exit 1
